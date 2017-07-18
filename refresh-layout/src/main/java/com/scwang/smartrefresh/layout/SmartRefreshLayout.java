@@ -23,7 +23,10 @@ import android.support.v4.view.NestedScrollingParentHelper;
 import android.support.v4.view.ScrollingView;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.view.ViewPager;
+import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -74,7 +77,6 @@ import static java.lang.System.currentTimeMillis;
  */
 @SuppressWarnings({"unused","WeakerAccess"})
 public class SmartRefreshLayout extends ViewGroup implements NestedScrollingParent, NestedScrollingChild, RefreshLayout {
-
     //<editor-fold desc="属性变量 property and variable">
     /**刷新状态*/
     protected RefreshState mState = RefreshState.None;
@@ -920,7 +922,7 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
         }
         return super.onTouchEvent(e);
     }
-
+/**阻止父层的View截获touch事件*/
     @Override
     public void requestDisallowInterceptTouchEvent(boolean b) {
         // if this is a List < L or another view that doesn't support nested
@@ -1272,7 +1274,7 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
     protected boolean checkLayoutParams(ViewGroup.LayoutParams p) {
         return p instanceof LayoutParams;
     }
-
+    /**生成默认的layoutparams*/
     @Override
     protected LayoutParams generateDefaultLayoutParams() {
         return new LayoutParams(MATCH_PARENT, MATCH_PARENT);
@@ -1527,6 +1529,10 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
 
     @Override
     public boolean startNestedScroll(int axes) {
+        StackTraceElement elements[]=Thread.currentThread().getStackTrace();
+        for (int i = 0; i < elements.length; i++) {
+            Log.e("TAG", "startNestedScroll:-------- "+elements[i].getMethodName() );
+        }
         return mNestedScrollingChildHelper.startNestedScroll(axes);
     }
 
