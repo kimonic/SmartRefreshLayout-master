@@ -2,6 +2,9 @@ package com.scwang.smartrefresh.layout.util;
 
 import android.content.res.Resources;
 
+/**
+ * 屏幕像素密度辅助类
+ */
 public class DensityUtil {
 
     float density;

@@ -249,17 +249,24 @@ public interface RefreshLayout {
      */
     boolean autoLoadmore(int delayed, float dragrate);
 
+    /**是否启用刷新*/
     boolean isEnableRefresh();
 
+    /**是否启用加载*/
     boolean isEnableLoadmore();
 
+    /**是否加载已结束*/
     boolean isLoadmoreFinished();
 
+    /**是否开启自动加载*/
     boolean isEnableAutoLoadmore();
 
+    /**是否启用越界反弹*/
     boolean isEnableOverScrollBounce();
 
+    /**是否启用纯滚动模式*/
     boolean isEnablePureScrollMode();
 
+    /**当加载时是否启用滚动内容*/
     boolean isEnableScrollContentWhenLoaded();
 }

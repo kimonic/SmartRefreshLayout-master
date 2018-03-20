@@ -53,52 +53,109 @@ import static com.scwang.smartrefresh.layout.util.ScrollBoundaryUtil.isTransform
 
 public class RefreshContentWrapper implements RefreshContent {
 
+    /**
+     * 头部高度
+     */
     private int mHeaderHeight = Integer.MAX_VALUE;
+    /**
+     * 底部高度
+     */
     private int mFooterHeight = mHeaderHeight - 1;
+    /**
+     * 内容视图
+     */
     private View mContentView;
+    /**
+     * 真正的内容视图
+     */
     private View mRealContentView;
+    /**
+     * 壳滑动的视图
+     */
     private View mScrollableView;
+    /**
+     * 固定的头部视图
+     */
     private View mFixedHeader;
+    /**
+     * 固定的底部视图
+     */
     private View mFixedFooter;
+    /**
+     * 触摸事件
+     */
     private MotionEvent mMotionEvent;
+    /**
+     * 刷新滚动边界适配器
+     */
     private RefreshScrollBoundaryAdapter mBoundaryAdapter = new RefreshScrollBoundaryAdapter();
 
+    /**
+     * 构造函数
+     *
+     * @param view 传入可滑动视图
+     */
     public RefreshContentWrapper(View view) {
         this.mContentView = mRealContentView = view;
-        this.findScrollableView(view);
+        this.findScrollableView(view);//查找出可滑动视图
     }
 
+    /**
+     * 构造函数--自己创建内容视图
+     *
+     * @param context 传入上下文
+     */
     public RefreshContentWrapper(Context context) {
-        this.mContentView = mRealContentView = new View(context);
+        this.mContentView = mRealContentView = new View(context);//新建view控件????
         this.findScrollableView(mContentView);
     }
 
     //<editor-fold desc="findScrollableView">
+
+    /**
+     * 查找可以滑动的视图
+     *
+     * @param content 内容视图
+     */
     private void findScrollableView(View content) {
+        //查找是否有内部可滑动视图
         mScrollableView = findScrollableViewInternal(content, true);
+        //嵌套滚动父视图不是嵌套滚动子视图,查找内部可滚动视图,不可以时自身
         if (mScrollableView instanceof NestedScrollingParent
                 && !(mScrollableView instanceof NestedScrollingChild)) {
             mScrollableView = findScrollableViewInternal(mScrollableView, false);
         }
+        //viewpager的情况
         if (mScrollableView instanceof ViewPager) {
             wrapperViewPager((ViewPager) this.mScrollableView);
         }
+        //无可滑动视图的情况
         if (mScrollableView == null) {
             mScrollableView = content;
         }
     }
 
+    /**
+     * viewpager的情况处理滑动视图
+     */
     private void wrapperViewPager(final ViewPager viewPager) {
         wrapperViewPager(viewPager, null);
     }
 
+    /**
+     * viewpager的情况处理滑动视图
+     */
     private void wrapperViewPager(final ViewPager viewPager, PagerPrimaryAdapter primaryAdapter) {
+        //用户界面县城运行
         viewPager.post(new Runnable() {
             int count = 0;
+            //主viewpager适配器
             PagerPrimaryAdapter mAdapter = primaryAdapter;
+
             @Override
             public void run() {
                 count++;
+//                viewpager的适配器
                 PagerAdapter adapter = viewPager.getAdapter();
                 if (adapter != null) {
                     if (adapter instanceof PagerPrimaryAdapter) {
@@ -114,18 +171,32 @@ public class RefreshContentWrapper implements RefreshContent {
                         mAdapter.attachViewPager(viewPager);
                     }
                 } else if (count < 10) {
-                    viewPager.postDelayed(this, 500);
+                    viewPager.postDelayed(this, 500);//延迟执行
                 }
             }
         });
     }
 
+    /**
+     * * 查找可滑动的内部视图
+     * selfable 是否必须传入true?????
+     *
+     * @param content  内容视图
+     * @param selfable 可滑动视图可以时自己本身
+     * @return 可滑动视图或者null
+     */
     private View findScrollableViewInternal(View content, boolean selfable) {
         View scrollableView = null;
+        //LinkedBlockingQueue是一个基于链表实现的可选容量的阻塞队列。队头的元素是插入时间最长的，
+        // 队尾的元素是最新插入的。新的元素将会被插入到队列的尾部。
+        // LinkedBlockingQueue的容量限制是可选的，如果在初始化时没有指定容量，那么默认使用int的最大值作为队列容量。
+        //Collections.singletonList(content)--一个只包含指定对象的不可变列表
         Queue<View> views = new LinkedBlockingQueue<>(Collections.singletonList(content));
         while (!views.isEmpty() && scrollableView == null) {
+            //检索并删除此队列的头部,并返回头部对象或null
             View view = views.poll();
             if (view != null) {
+                //可滑动控件会自己处理滑动事件,故不需要再次查找其中的子view
                 if ((selfable || view != content) && (view instanceof AbsListView
                         || view instanceof ScrollView
                         || view instanceof ScrollingView
@@ -133,12 +204,20 @@ public class RefreshContentWrapper implements RefreshContent {
                         || view instanceof NestedScrollingParent
                         || view instanceof WebView
                         || view instanceof ViewPager)) {
+
+
                     scrollableView = view;
+
+
                 } else if (view instanceof ViewGroup) {
+
+
                     ViewGroup group = (ViewGroup) view;
                     for (int j = 0; j < group.getChildCount(); j++) {
-                        views.add(group.getChildAt(j));
+                        views.add(group.getChildAt(j));//将viewgroup中的view添加到队列中
                     }
+
+
                 }
             }
         }
@@ -147,20 +226,31 @@ public class RefreshContentWrapper implements RefreshContent {
     //</editor-fold>
 
     //<editor-fold desc="implements">
+
+    /**
+     * 获取可滑动视图
+     */
     @NonNull
     public View getView() {
         return mContentView;
     }
 
+    /**
+     * 是嵌套滚动子视图
+     */
     @Override
     public boolean isNestedScrollingChild(MotionEvent e) {
-        MotionEvent event = MotionEvent.obtain(e);
+        MotionEvent event = MotionEvent.obtain(e);//复制触摸事件
+        //重新定义坐标系
         event.offsetLocation(-mContentView.getLeft(), -mContentView.getTop() - mRealContentView.getTranslationY());
         boolean isNested = isNestedScrollingChild(mContentView, event);
-        event.recycle();
+        event.recycle();//触摸事件回收
         return isNested;
     }
 
+    /**
+     * 是嵌套滚动子视图
+     */
     private boolean isNestedScrollingChild(View targetView, MotionEvent event) {
         if (targetView instanceof NestedScrollingChild
                 || (Build.VERSION.SDK_INT >= 21 && targetView.isNestedScrollingEnabled())) {
@@ -172,19 +262,23 @@ public class RefreshContentWrapper implements RefreshContent {
             PointF point = new PointF();
             for (int i = childCount; i > 0; i--) {
                 View child = viewGroup.getChildAt(i - 1);
-                if (isTransformedTouchPointInView(viewGroup,child, event.getX(), event.getY() , point)) {
+                if (isTransformedTouchPointInView(viewGroup, child, event.getX(), event.getY(), point)) {
                     event = MotionEvent.obtain(event);
                     event.offsetLocation(point.x, point.y);
-                    return isNestedScrollingChild(child, event);
+                    return isNestedScrollingChild(child, event);//递归调用
                 }
             }
         }
         return false;
     }
 
+    /**
+     * 移动微调
+     */
     @Override
     public void moveSpinner(int spinner) {
-        mRealContentView.setTranslationY(spinner);
+        //Y方向上移动一段距离,该距离移动后会保持这个效果不变
+        mRealContentView.setTranslationY(spinner);//Y方向移动视图
         if (mFixedHeader != null) {
             mFixedHeader.setTranslationY(Math.max(0, spinner));
         }
@@ -193,46 +287,73 @@ public class RefreshContentWrapper implements RefreshContent {
         }
     }
 
+    /**
+     * 是否可以向上滑动
+     */
     @Override
     public boolean canScrollUp() {
         return mBoundaryAdapter.canPullDown(mContentView);
     }
 
+    /**
+     * 是否可以向下滑动
+     */
     @Override
     public boolean canScrollDown() {
         return mBoundaryAdapter.canPullUp(mContentView);
     }
 
+    /**
+     * 测量可滑动视图控件的宽度与高度
+     */
     @Override
     public void measure(int widthSpec, int heightSpec) {
         mContentView.measure(widthSpec, heightSpec);
     }
 
+    /**
+     * 获取布局参数
+     */
     @Override
     public ViewGroup.LayoutParams getLayoutParams() {
         return mContentView.getLayoutParams();
     }
 
+    /**
+     * 获取控件的测量宽度
+     */
     @Override
     public int getMeasuredWidth() {
         return mContentView.getMeasuredWidth();
     }
 
+    /**
+     * 获取控件的测量高度
+     */
     @Override
     public int getMeasuredHeight() {
         return mContentView.getMeasuredHeight();
     }
 
+    /**
+     * 控件相对于父控件的布局
+     */
     @Override
     public void layout(int left, int top, int right, int bottom) {
         mContentView.layout(left, top, right, bottom);
     }
 
+    /**
+     * 获取可滑动的视图
+     */
     @Override
     public View getScrollableView() {
         return mScrollableView;
     }
 
+    /**
+     * 触摸按下
+     */
     @Override
     public void onActionDown(MotionEvent e) {
         mMotionEvent = MotionEvent.obtain(e);
@@ -240,12 +361,18 @@ public class RefreshContentWrapper implements RefreshContent {
         mBoundaryAdapter.setActionEvent(mMotionEvent);
     }
 
+    /**
+     * 触摸抬起或取消
+     */
     @Override
     public void onActionUpOrCancel() {
         mMotionEvent = null;
         mBoundaryAdapter.setActionEvent(null);
     }
 
+    /**
+     * 安装组件
+     */
     @Override
     public void setupComponent(RefreshKernel kernel, View fixedHeader, View fixedFooter) {
         if (mScrollableView instanceof RecyclerView) {
@@ -327,6 +454,7 @@ public class RefreshContentWrapper implements RefreshContent {
             }
             return new AnimatorUpdateListener() {
                 int lastValue = kernel.getSpinner();
+
                 @Override
                 public void onAnimationUpdate(ValueAnimator animation) {
                     int thisValue = (int) animation.getAnimatedValue();
@@ -376,12 +504,12 @@ public class RefreshContentWrapper implements RefreshContent {
             boolean overScroll = layout.isEnableOverScrollBounce() || layout.isRefreshing() || layout.isLoading();
             if (scrollY <= 0 && oldScrollY > 0 && mMotionEvent == null && lastTime - lastTimeOld > 1000 && overScroll && layout.isEnableRefresh()) {
                 //time:16000000 value:160
-                final int velocity = (lastOldScrollY - oldScrollY) * 16000 / (int)((lastTime - lastTimeOld)/1000f);
+                final int velocity = (lastOldScrollY - oldScrollY) * 16000 / (int) ((lastTime - lastTimeOld) / 1000f);
 //                    System.out.println("ValueAnimator - " + (lastTime - lastTimeOld) + " - " + velocity+"("+(lastOldScrollY - oldScrollY)+")");
                 kernel.animSpinnerBounce(Math.min(velocity, mHeaderHeight));
             } else if (oldScrollY < scrollY && mMotionEvent == null && overScroll && layout.isEnableLoadmore()) {
                 if (lastTime - lastTimeOld > 1000 && !ScrollBoundaryUtil.canScrollDown(mScrollableView)) {
-                    final int velocity = (lastOldScrollY - oldScrollY) * 16000 / (int)((lastTime - lastTimeOld)/1000f);
+                    final int velocity = (lastOldScrollY - oldScrollY) * 16000 / (int) ((lastTime - lastTimeOld) / 1000f);
 //                    System.out.println("ValueAnimator - " + (lastTime - lastTimeOld) + " - " + velocity+"("+(lastOldScrollY - oldScrollY)+")");
                     kernel.animSpinnerBounce(Math.max(velocity, -mFooterHeight));
                 }
@@ -417,7 +545,7 @@ public class RefreshContentWrapper implements RefreshContent {
             scrollY = getScrollY(absListView, firstVisibleItem);
             scrollDy = lastScrolly - scrollY;
 
-            final int dy =lastScrollDy + scrollDy;
+            final int dy = lastScrollDy + scrollDy;
             if (totalItemCount > 0) {
                 RefreshLayout layout = kernel.getRefreshLayout();
                 boolean overScroll = (layout.isEnableOverScrollBounce() || layout.isRefreshing() || layout.isLoading());
@@ -458,7 +586,7 @@ public class RefreshContentWrapper implements RefreshContent {
                 itemRecord.top = firstView.getTop();
                 recordSp.append(firstVisibleItem, itemRecord);
 
-                int height = 0,lastheight = 0;
+                int height = 0, lastheight = 0;
                 for (int i = 0; i < firstVisibleItem; i++) {
                     ItemRecod itemRecod = recordSp.get(i);
                     if (itemRecod != null) {
@@ -483,36 +611,51 @@ public class RefreshContentWrapper implements RefreshContent {
         }
     }
 
+    /**
+     * RecyclerView滑动组件
+     */
     private class RecyclerViewScrollComponent extends RecyclerView.OnScrollListener {
+        /**最后滑动位置的y坐标*/
         int lastDy;
+        /**最后的抛掷时间*/
         long lastFlingTime;
+        /**刷新布局内核*/
         RefreshKernel kernel;
 
         RecyclerViewScrollComponent(RefreshKernel kernel) {
             this.kernel = kernel;
         }
+
+        /**
+         * 滑动状态改变
+         */
         @Override
         public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+//            获取刷新布局
             RefreshLayout layout = kernel.getRefreshLayout();
+            //RecyclerView停止滚动
             if (newState == RecyclerView.SCROLL_STATE_IDLE && mMotionEvent == null) {
+                //最后抛掷的时间到当前时间的时间差
                 boolean intime = System.currentTimeMillis() - lastFlingTime < 1000;
+                //是否越界滚动
                 boolean overScroll = layout.isEnableOverScrollBounce() || layout.isRefreshing() || layout.isLoading();
                 if (lastDy < -1 && intime && overScroll && layout.isEnableRefresh()) {
+                    //启动回弹动画
                     kernel.animSpinnerBounce(Math.min(-lastDy * 2, mHeaderHeight));
-                } else if (layout.isEnableLoadmore()
-                        && !layout.isLoadmoreFinished()
-                        && layout.isEnableAutoLoadmore()
-                        && layout.getState() == RefreshState.None) {
+                } else if (layout.isEnableLoadmore()//启用加载更多
+                        && !layout.isLoadmoreFinished()//加载更多未结束
+                        && layout.isEnableAutoLoadmore()//启动自动加载
+                        && layout.getState() == RefreshState.None) {//刷新布局无状态
 //                    RecyclerView.LayoutManager manager = recyclerView.getLayoutManager();
 //                    if (manager instanceof LinearLayoutManager) {
 //                        LinearLayoutManager linearManager = ((LinearLayoutManager) manager);
 //                        int lastVisiblePosition = linearManager.findLastVisibleItemPosition();
 //                        if(lastVisiblePosition >= linearManager.getItemCount() - 1){
 //                            kernel.getRefreshLayout().autoLoadmore(0,1);
-//                        }
+//                        }启用自动加载
 //                    }
                 } else if (lastDy > 1 && intime && overScroll && layout.isEnableLoadmore()) {
-                    kernel.animSpinnerBounce(Math.max(-lastDy * 2, -mFooterHeight));
+                    kernel.animSpinnerBounce(Math.max(-lastDy * 2, -mFooterHeight));//启动回弹
                 }
                 lastDy = 0;
             }
@@ -520,26 +663,34 @@ public class RefreshContentWrapper implements RefreshContent {
 
         @Override
         public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+            //最后滑动位置的y坐标
             lastDy = dy;
+            //获取刷新布局
             RefreshLayout layout = kernel.getRefreshLayout();
             if (dy > 0
-                    && layout.isEnableLoadmore()
-                    && !layout.isLoadmoreFinished()
-                    && layout.isEnableAutoLoadmore()
-                    && layout.getState() == RefreshState.None ){
+                    && layout.isEnableLoadmore()//启用加载更多
+                    && !layout.isLoadmoreFinished()//加载更多未结束
+                    && layout.isEnableAutoLoadmore()//启用自动加载
+                    && layout.getState() == RefreshState.None) {//刷新布局无状态
+                //获取RecyclerView的布局管理器
                 RecyclerView.LayoutManager manager = recyclerView.getLayoutManager();
+                //如果时线性布局管理器
                 if (manager instanceof LinearLayoutManager) {
                     LinearLayoutManager linearManager = ((LinearLayoutManager) manager);
+                    //最后显示的位置
                     int lastVisiblePosition = linearManager.findLastVisibleItemPosition();
-                    if(lastVisiblePosition >= linearManager.getItemCount() - 1
-                            && lastVisiblePosition > 0
-                            && !ScrollBoundaryUtil.canScrollDown(recyclerView)){
-                        kernel.getRefreshLayout().autoLoadmore(0,1);
+
+                    //自动加载
+                    if (lastVisiblePosition >= linearManager.getItemCount() - 1//最后位置
+                            && lastVisiblePosition > 0//有item
+                            && !ScrollBoundaryUtil.canScrollDown(recyclerView)) {//不能下滑
+                        kernel.getRefreshLayout().autoLoadmore(0, 1);
                     }
                 }
             }
         }
 
+        /**RecyclerView注册监听器*/
         void attach(RecyclerView recyclerView) {
             recyclerView.addOnScrollListener(this);
             recyclerView.setOnFlingListener(new RecyclerView.OnFlingListener() {
@@ -557,7 +708,7 @@ public class RefreshContentWrapper implements RefreshContent {
     private static int measureViewHeight(View view) {
         ViewGroup.LayoutParams p = view.getLayoutParams();
         if (p == null) {
-            p = new ViewGroup.LayoutParams(MATCH_PARENT,WRAP_CONTENT);
+            p = new ViewGroup.LayoutParams(MATCH_PARENT, WRAP_CONTENT);
         }
         int childHeightSpec;
         int childWidthSpec = ViewGroup.getChildMeasureSpec(0, 0, p.width);
@@ -571,9 +722,16 @@ public class RefreshContentWrapper implements RefreshContent {
     }
     //</editor-fold>
 
+
+    /**
+     * 主viewpager适配器
+     */
     private class PagerPrimaryAdapter extends PagerAdapterWrapper {
         private ViewPager mViewPager;
 
+        /**
+         * 构造函数
+         */
         PagerPrimaryAdapter(PagerAdapter wrapped) {
             super(wrapped);
         }
@@ -582,12 +740,18 @@ public class RefreshContentWrapper implements RefreshContent {
             wrapped = adapter;
         }
 
+        /**
+         * 附加viewpager
+         */
         @Override
         public void attachViewPager(ViewPager viewPager) {
             mViewPager = viewPager;
             super.attachViewPager(viewPager);
         }
 
+        /**
+         * 设置viewpager观察者
+         */
         @Override
         public void setViewPagerObserver(DataSetObserver observer) {
             super.setViewPagerObserver(observer);
@@ -596,6 +760,9 @@ public class RefreshContentWrapper implements RefreshContent {
             }
         }
 
+        /**
+         * 设置主item
+         */
         @Override
         public void setPrimaryItem(ViewGroup container, int position, Object object) {
             super.setPrimaryItem(container, position, object);
