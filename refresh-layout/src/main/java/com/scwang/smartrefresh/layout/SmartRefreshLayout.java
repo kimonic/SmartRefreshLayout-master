@@ -485,6 +485,7 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
             }
         }
 
+        //Android studio 预览模式下会被调用???
         if (isInEditMode()) {
             if (mPrimaryColors != null) {
                 if (mRefreshHeader != null) {
@@ -495,7 +496,7 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
                 }
             }
 
-            //重新排序
+            //重新排序,将处在父控件中的某一子控件显示在父控件的最上层
             bringChildToFront(mRefreshContent.getView());
             if (mRefreshHeader != null && mRefreshHeader.getSpinnerStyle() != SpinnerStyle.FixedBehind) {
                 bringChildToFront(mRefreshHeader.getView());
@@ -527,7 +528,7 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
         if (mRefreshContent == null
                 && mRefreshHeader == null
                 && mRefreshFooter == null) {//全部为null时重新回调
-            onFinishInflate();
+            onFinishInflate();//从xml中初始化完成
         }
 
         if (mKernel == null) {//初始化刷新内核
@@ -547,6 +548,7 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
                 mRefreshContent.getView().setLayoutParams(new LayoutParams(MATCH_PARENT, MATCH_PARENT));
             }
         }
+        //根据id查找视图
         if (mFixedHeaderViewId > 0 && mFixedHeaderView == null) {//寻找默认header??
             mFixedHeaderView = findViewById(mFixedHeaderViewId);
         }
@@ -558,13 +560,13 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
         mRefreshContent.setupComponent(mKernel, mFixedHeaderView, mFixedFooterView);
 
         if (mRefreshHeader == null) {//头部为空
-            if (mEnablePureScrollMode) {
+            if (mEnablePureScrollMode) {//纯滚动模式
                 mRefreshHeader = new FalsifyHeader(getContext());//虚假的header
-            } else {
+            } else {//创建头部
                 mRefreshHeader = mHeaderCreater.createRefreshHeader(getContext(), this);
             }
             if (!(mRefreshHeader.getView().getLayoutParams() instanceof MarginLayoutParams)) {
-                if (mRefreshHeader.getSpinnerStyle() == SpinnerStyle.Scale) {
+                if (mRefreshHeader.getSpinnerStyle() == SpinnerStyle.Scale) {//缩放模式
                     addView(mRefreshHeader.getView(), MATCH_PARENT, MATCH_PARENT);
                 } else {
                     addView(mRefreshHeader.getView(), MATCH_PARENT, WRAP_CONTENT);
@@ -572,7 +574,7 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
             }
         }
         if (mRefreshFooter == null) {//底部为空
-            if (mEnablePureScrollMode) {
+            if (mEnablePureScrollMode) {//纯滚动模式
                 mRefreshFooter = new RefreshFooterWrapper(new FalsifyHeader(getContext()));
             } else {
                 mRefreshFooter = mFooterCreater.createRefreshFooter(getContext(), this);
@@ -607,6 +609,10 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
         }
     }
 
+
+    /**
+     * 测量
+     */
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int minimumHeight = 0;
@@ -842,22 +848,22 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
         if (mRefreshContent != null) {
             switch (action) {
                 case MotionEvent.ACTION_DOWN:
-                    mRefreshContent.onActionDown(e);
+                    mRefreshContent.onActionDown(e);//传递按下事件
                     break;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     mRefreshContent.onActionUpOrCancel();
             }
         }
-        if (reboundAnimator != null
-                || (mState == RefreshState.Loading && mDisableContentWhenLoading)
-                || (mState == RefreshState.Refreshing && mDisableContentWhenRefresh)) {
-            return false;
+        if (reboundAnimator != null//反弹属性动画
+                || (mState == RefreshState.Loading && mDisableContentWhenLoading)//正在加载,禁止操作
+                || (mState == RefreshState.Refreshing && mDisableContentWhenRefresh)) {//正在刷新,禁止操作
+            return false;//不消费本次事件
         }
         if (!isEnabled() || mNestedScrollInProgress
                 || (!mEnableRefresh && !(mEnableLoadmore && !mLoadmoreFinished))
-                || mState == RefreshState.Loading
-                || mState == RefreshState.Refreshing) {
+                || mState == RefreshState.Loading//正在加载
+                || mState == RefreshState.Refreshing) {//正在刷新
             return super.dispatchTouchEvent(e);
         }
         switch (action) {
@@ -865,21 +871,21 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
                 mTouchX = e.getX();
                 mTouchY = e.getY();
                 super.dispatchTouchEvent(e);
-                return true;
+                return true;//消费本次事件
 
             case MotionEvent.ACTION_MOVE:
                 final float dx = e.getX() - mTouchX;
                 final float dy = e.getY() - mTouchY;
-                if (mState == RefreshState.None) {
+                if (mState == RefreshState.None) {//无状态
                     if (Math.abs(dy) >= mTouchSlop && Math.abs(dx) < Math.abs(dy)) {//滑动允许最大角度为45度
-                        if (dy > 0 && mEnableRefresh && !mRefreshContent.canScrollUp()) {
+                        if (dy > 0 && mEnableRefresh && !mRefreshContent.canScrollUp()) {//允许刷新,不可以向上滑动
                             mInitialMotionY = dy + mTouchY - mTouchSlop;
-                            setStatePullDownToRefresh();
+                            setStatePullDownToRefresh();//设置下拉刷新状态
                             e.setAction(MotionEvent.ACTION_CANCEL);
                             super.dispatchTouchEvent(e);
                         } else if (dy < 0 && mEnableLoadmore && !mLoadmoreFinished && !mRefreshContent.canScrollDown()) {
                             mInitialMotionY = dy + mTouchY + mTouchSlop;
-                            setStatePullUpToLoad();
+                            setStatePullUpToLoad();//设置上拉加载状态
                             e.setAction(MotionEvent.ACTION_CANCEL);
                             super.dispatchTouchEvent(e);
                         } else {
@@ -890,14 +896,18 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
                     }
                 }
                 final float spinner = dy + mTouchY - mInitialMotionY;
-                if (((mState == RefreshState.PullDownToRefresh || mState == RefreshState.ReleaseToRefresh) && spinner < 0)
-                        || ((mState == RefreshState.PullToUpLoad || mState == RefreshState.ReleaseToLoad) && spinner > 0)) {
-                    long time = currentTimeMillis();
-                    if (mFalsifyEvent == null) {
-                        mFalsifyEvent = MotionEvent.obtain(time, time, MotionEvent.ACTION_DOWN, mTouchX + dx, mInitialMotionY, 0);
+                if (((mState == RefreshState.PullDownToRefresh//下拉加载状态
+                        || mState == RefreshState.ReleaseToRefresh) && spinner < 0)//释放刷新状态
+                        || ((mState == RefreshState.PullToUpLoad
+                        || mState == RefreshState.ReleaseToLoad) && spinner > 0)) {
+                    long time = currentTimeMillis();//当前时间
+                    if (mFalsifyEvent == null) {//伪造事件滑动判断??
+                        mFalsifyEvent = MotionEvent.obtain(time, time, MotionEvent.ACTION_DOWN,
+                                mTouchX + dx, mInitialMotionY, 0);
                         super.dispatchTouchEvent(mFalsifyEvent);
                     }
-                    MotionEvent em = MotionEvent.obtain(time, time, MotionEvent.ACTION_MOVE, mTouchX + dx, mInitialMotionY + spinner, 0);
+                    MotionEvent em = MotionEvent.obtain(time, time, MotionEvent.ACTION_MOVE,
+                            mTouchX + dx, mInitialMotionY + spinner, 0);
                     super.dispatchTouchEvent(em);
                     if (mSpinner != 0) {
                         moveSpinnerInfinitely(0);
@@ -927,6 +937,9 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
         return super.dispatchTouchEvent(e);
     }
 
+    /**
+     * 实施此方法来拦截所有触摸屏幕动作事件。 这允许您在事件发送给您的孩子时观看事件，并在任何时候掌握当前手势的所有权
+     */
     @Override
     public boolean onInterceptTouchEvent(MotionEvent e) {
         if (mState == RefreshState.Refreshing || mState == RefreshState.Loading) {
@@ -1183,6 +1196,7 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
         @Override
         public void onAnimationEnd(Animator animation) {
             reboundAnimator = null;
+            //动画结束状态修改为none
             if ((int) ((ValueAnimator) animation).getAnimatedValue() == 0) {
                 if (mState != RefreshState.None &&
                         mState != RefreshState.Refreshing &&
@@ -1197,14 +1211,17 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
             animation -> moveSpinner((int) animation.getAnimatedValue(), true);
     //</editor-fold>
 
+    /**反弹属性动画*/
     protected ValueAnimator animSpinner(int endSpinner) {
         return animSpinner(endSpinner, 0);
     }
 
+    /**反弹属性动画*/
     protected ValueAnimator animSpinner(int endSpinner, int startDelay) {
         return animSpinner(endSpinner, startDelay, mReboundInterpolator);
     }
 
+    /**反弹属性动画*/
     protected ValueAnimator animSpinner(int endSpinner, int startDelay, Interpolator interpolator) {
         if (mSpinner != endSpinner) {
             if (reboundAnimator != null) {
@@ -1291,6 +1308,9 @@ public class SmartRefreshLayout extends ViewGroup implements NestedScrollingPare
         return true;
     }
 
+    /**阻尼系数回弹动画
+     * ???
+     */
     protected void moveSpinnerInfinitely(float dy) {
         if (mState == RefreshState.Refreshing && dy >= 0) {
             if (dy < mHeaderHeight) {
